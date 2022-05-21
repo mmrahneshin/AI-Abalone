@@ -1,0 +1,16 @@
+[gd_scene load_steps=4 format=2]
+
+[ext_resource path="res://Assets/Board.glb" type="PackedScene" id=1]
+[ext_resource path="res://Assets/Guard.tres" type="Material" id=2]
+[ext_resource path="res://Assets/Holes.tres" type="Material" id=3]
+
+[node name="Board" instance=ExtResource( 1 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 )
+
+[node name="guard" parent="." index="0"]
+transform = Transform( 9.32709, 0, -5.385, 0, 10.77, 0, 5.385, 0, 9.32709, 0, -0.00892289, 0 )
+material/0 = ExtResource( 2 )
+
+[node name="holes" parent="." index="1"]
+transform = Transform( 15, 0, 0, 0, 15, 0, 0, 0, 15, 0, 0.0920819, 0 )
+material/0 = ExtResource( 3 )
