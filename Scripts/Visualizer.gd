@@ -4,23 +4,79 @@ export var pieces_path : NodePath
 onready var pieces = get_node(pieces_path)
 var white_piece = preload("res://Scenes/White Piece.tscn")
 var black_piece = preload("res://Scenes/Black Piece.tscn")
+var circle1 = [21,22,31,39,38,29]
+var circle2 = [13,14,15,23,32,40,47,46,45,37,28,20]
+var circle3 = [6,7,8,9,16,24,33,41,48,54,53,52,51,44,36,27,19,12]
+var circle4 = [0,1,2,3,4,10,17,25,34,42,49,55,60,59,58,57,56,50,43,35,26,18,11,5]
+var weight = [100,50,5,10000]
 
 func _ready():
 	draw_complete_board(BoardManager.current_board)
 	var first_board = BoardManager.current_board
 	var state = State.new(first_board, 0,0)
-	#var temp = Successor.calculate_successor(state,2)
-	#print(temp)
 	
-	state = minimax_depth_limit(state, 2, 2)
+	var turn = 2
+	for i in range(0, 51):
+		state = minimax_depth_limit(state, 2, turn)
+		turn = 3 - turn
 	
 	update_board(state.board)
-	
-	
 
+func utility(piece, board):
+	var result = 0
+	var marbles = get_marbles(piece, board)
+	var marbles_opp = get_marbles(3 - piece, board)
+	
+	result += weight[0] * len(marbles)
+	result += weight[1] * enemy_center_distance(marbles_opp)
+	result += weight[2] * center_distance(marbles)
+	result += weight[3] * kill_enemy(marbles_opp)
+	
+	return result
+
+func kill_enemy(marbles_opp):
+	return 14 - len(marbles_opp)
+
+func enemy_center_distance(marbles_opp):
+	var result = 0
+	for p in marbles_opp: 
+		if p in circle1:
+			result += 1
+		elif p in circle2:
+			result += 2
+		elif p in circle3:
+			result += 3
+		elif p in circle4:
+			result += 4
+		else :
+			result += 0
+	return result
+
+func center_distance(marbles):
+	var result = 0
+	for p in marbles: 
+		if p in circle1:
+			result += 4
+		elif p in circle2:
+			result += 3
+		elif p in circle3:
+			result += 2
+		elif p in circle4:
+			result += 1
+		else :
+			result += 5
+	return result
+
+func get_marbles(piece, board):
+	var indexes = []
+	for index in range(len(board)):
+		if board[index] == piece:
+			indexes.append(index)
+	return indexes
 
 func minimax_depth_limit(state, depth, number):
-	var next_state = max_func(state, depth, number)
+	var next_state
+	next_state = max_func(state, depth, number)
 	return next_state
 	
 
@@ -30,18 +86,11 @@ func max_func(state, depth, number):
 	
 	var max_value = -99999999999
 	var legal_move
-	if number == 2:
-		legal_move = Successor.calculate_successor(state,2)
-	else:
-		legal_move = Successor.calculate_successor(state,1)
+	legal_move = Successor.calculate_successor(state,number)
 	for move in legal_move:
-		var white_state = min_func(move, depth-1, number)
-		var diff
-		if number == 2:
-			diff = white_state.white_score - white_state.black_score
-		else:
-			diff = white_state.black_score - white_state.white_score
-		if  diff >= max_value:
+		var min_state = min_func(move, depth-1, number)
+		var diff = utility(number, min_state.board)
+		if  diff > max_value:
 			max_value = diff
 			state = move
 	return state
@@ -54,18 +103,11 @@ func min_func(state, depth, number):
 	
 	var min_value = 9999999999
 	var legal_move
-	if number == 2:
-		legal_move = Successor.calculate_successor(state,1)
-	else:
-		legal_move = Successor.calculate_successor(state,2)
+	legal_move = Successor.calculate_successor(state, 3 - number)
 	for move in legal_move:
-		var black_state = max_func(move, depth-1, number)
-		var diff
-		if number == 2:
-			diff = black_state.white_score - black_state.black_score
-		else:
-			diff = black_state.black_score - black_state.white_score
-		if  diff <= min_value:
+		var max_state = max_func(move, depth-1, number)
+		var diff = utility(number, max_state.board)
+		if  diff < min_value:
 			min_value = diff
 			state = move
 	return state
