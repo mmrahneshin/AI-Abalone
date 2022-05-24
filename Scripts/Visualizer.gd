@@ -9,20 +9,20 @@ var circle1 = [21,22,31,39,38,29]
 var circle2 = [13,14,15,23,32,40,47,46,45,37,28,20]
 var circle3 = [6,7,8,9,16,24,33,41,48,54,53,52,51,44,36,27,19,12]
 var circle4 = [0,1,2,3,4,10,17,25,34,42,49,55,60,59,58,57,56,50,43,35,26,18,11,5]
-var weight = [-110,100,5,1000]
+var weight = [-1000,100,5,1000]
 var state
 var turn
-#var transposition = []
+var transposition = []
 
 func _ready():
 	draw_complete_board(BoardManager.current_board)
 	var first_board = BoardManager.current_board
 	state = State.new(first_board, 0,0)
-	turn = 2
+	turn = 1
 
 func _process(delta):
 	
-#	transposition.append(state.board)
+	transposition.append(state.board)
 	
 #	minimax function -------------------------
 	state = minimax_depth_limit(state, 2, turn)
@@ -86,14 +86,14 @@ func get_marbles(piece, board):
 		if board[index] == piece:
 			indexes.append(index)
 	return indexes
-#
-#func filter(moves):
-#	var filtered = []
-#	for move in moves:
-#		if transposition.has(move.board):
-#			continue
-#		filtered.append(move)
-#	return filtered
+
+func filter(moves):
+	var filtered = []
+	for move in moves:
+		if transposition.has(move.board):
+			continue
+		filtered.append(move)
+	return filtered
 
 func minimax_depth_limit(state, depth, number):
 	var next_state
@@ -108,8 +108,8 @@ func max_func(state, depth, number):
 	var max_value = -99999999999
 	var legal_moves
 	legal_moves = Successor.calculate_successor(state,number)
-#	var legal_move_filtered = filter(legal_moves)
-	for move in legal_moves:
+	var legal_move_filtered = filter(legal_moves)
+	for move in legal_move_filtered:
 		var min_state = min_func(move, depth-1, number)
 		var diff = eval(number, min_state.board)
 		if  diff > max_value:
@@ -124,8 +124,8 @@ func min_func(state, depth, number):
 	var min_value = 9999999999
 	var legal_moves
 	legal_moves = Successor.calculate_successor(state, 3 - number)
-#	var legal_move_filtered = filter(legal_moves)
-	for move in legal_moves:
+	var legal_move_filtered = filter(legal_moves)
+	for move in legal_move_filtered:
 		var max_state = max_func(move, depth-1, number)
 		var diff = eval(number, max_state.board)
 		if  diff < min_value:
@@ -144,8 +144,8 @@ func max_value(state, depth, number, alpha, beta):
 	
 	var legal_moves
 	legal_moves = Successor.calculate_successor(state,number)
-#	var legal_move_filtered = filter(legal_moves)
-	for move in legal_moves:
+	var legal_move_filtered = filter(legal_moves)
+	for move in legal_move_filtered:
 		var min_state = min_value(move, depth-1, number, alpha, beta)
 		var diff = eval(number, min_state.board)
 		if  diff >= beta:
@@ -162,8 +162,8 @@ func min_value(state, depth, number, alpha, beta):
 	
 	var legal_moves
 	legal_moves = Successor.calculate_successor(state,number)
-#	var legal_move_filtered = filter(legal_moves)
-	for move in legal_moves:
+	var legal_move_filtered = filter(legal_moves)
+	for move in legal_move_filtered:
 		var max_state = max_value(move, depth-1, number, alpha, beta)
 		var diff = eval(number, max_state.board)
 		if  diff <= alpha:
