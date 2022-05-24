@@ -4,38 +4,51 @@ export var pieces_path : NodePath
 onready var pieces = get_node(pieces_path)
 var white_piece = preload("res://Scenes/White Piece.tscn")
 var black_piece = preload("res://Scenes/Black Piece.tscn")
+
 var circle1 = [21,22,31,39,38,29]
 var circle2 = [13,14,15,23,32,40,47,46,45,37,28,20]
 var circle3 = [6,7,8,9,16,24,33,41,48,54,53,52,51,44,36,27,19,12]
 var circle4 = [0,1,2,3,4,10,17,25,34,42,49,55,60,59,58,57,56,50,43,35,26,18,11,5]
-var weight = [100,50,5,10000]
+var weight = [-110,100,5,1000]
+var state
+var turn
+#var transposition = []
 
 func _ready():
 	draw_complete_board(BoardManager.current_board)
 	var first_board = BoardManager.current_board
-	var state = State.new(first_board, 0,0)
+	state = State.new(first_board, 0,0)
+	turn = 2
+
+func _process(delta):
 	
-	var turn = 2
-	for i in range(0, 51):
-		state = minimax_depth_limit(state, 2, turn)
-		turn = 3 - turn
+#	transposition.append(state.board)
+	
+#	minimax function -------------------------
+	state = minimax_depth_limit(state, 2, turn)
+#	minimax function -------------------------
+	
+#	alpha beta function------------------------
+#	state = alpha_beta_search(state, 2, turn)
+#	alpha beta function------------------------
 	
 	update_board(state.board)
+	turn = 3 - turn 
 
-func utility(piece, board):
+func eval(piece, board):
 	var result = 0
 	var marbles = get_marbles(piece, board)
 	var marbles_opp = get_marbles(3 - piece, board)
 	
-	result += weight[0] * len(marbles)
+	result += weight[0] * kill(marbles)
 	result += weight[1] * enemy_center_distance(marbles_opp)
 	result += weight[2] * center_distance(marbles)
-	result += weight[3] * kill_enemy(marbles_opp)
+	result += weight[3] * kill(marbles_opp)
 	
 	return result
 
-func kill_enemy(marbles_opp):
-	return 14 - len(marbles_opp)
+func kill(marbles):
+	return 14 - len(marbles)
 
 func enemy_center_distance(marbles_opp):
 	var result = 0
@@ -73,6 +86,14 @@ func get_marbles(piece, board):
 		if board[index] == piece:
 			indexes.append(index)
 	return indexes
+#
+#func filter(moves):
+#	var filtered = []
+#	for move in moves:
+#		if transposition.has(move.board):
+#			continue
+#		filtered.append(move)
+#	return filtered
 
 func minimax_depth_limit(state, depth, number):
 	var next_state
@@ -85,31 +106,72 @@ func max_func(state, depth, number):
 		return state
 	
 	var max_value = -99999999999
-	var legal_move
-	legal_move = Successor.calculate_successor(state,number)
-	for move in legal_move:
+	var legal_moves
+	legal_moves = Successor.calculate_successor(state,number)
+#	var legal_move_filtered = filter(legal_moves)
+	for move in legal_moves:
 		var min_state = min_func(move, depth-1, number)
-		var diff = utility(number, min_state.board)
+		var diff = eval(number, min_state.board)
 		if  diff > max_value:
 			max_value = diff
 			state = move
 	return state
-
-
 
 func min_func(state, depth, number):
 	if state.black_score == 6 or state.white_score == 6 or depth <= 0:
 		return state
 	
 	var min_value = 9999999999
-	var legal_move
-	legal_move = Successor.calculate_successor(state, 3 - number)
-	for move in legal_move:
+	var legal_moves
+	legal_moves = Successor.calculate_successor(state, 3 - number)
+#	var legal_move_filtered = filter(legal_moves)
+	for move in legal_moves:
 		var max_state = max_func(move, depth-1, number)
-		var diff = utility(number, max_state.board)
+		var diff = eval(number, max_state.board)
 		if  diff < min_value:
 			min_value = diff
 			state = move
+	return state
+
+func alpha_beta_search(state, depth, number):
+	var next_state
+	next_state = max_value(state, depth, number, -99999999999999, 9999999999999)
+	return next_state
+
+func max_value(state, depth, number, alpha, beta):
+	if state.black_score == 6 or state.white_score == 6 or depth <= 0:
+		return state
+	
+	var legal_moves
+	legal_moves = Successor.calculate_successor(state,number)
+#	var legal_move_filtered = filter(legal_moves)
+	for move in legal_moves:
+		var min_state = min_value(move, depth-1, number, alpha, beta)
+		var diff = eval(number, min_state.board)
+		if  diff >= beta:
+			state = move
+			return state
+		if diff > alpha:
+			state = move
+			alpha = diff
+	return state
+
+func min_value(state, depth, number, alpha, beta):
+	if state.black_score == 6 or state.white_score == 6 or depth <= 0:
+		return state
+	
+	var legal_moves
+	legal_moves = Successor.calculate_successor(state,number)
+#	var legal_move_filtered = filter(legal_moves)
+	for move in legal_moves:
+		var max_state = max_value(move, depth-1, number, alpha, beta)
+		var diff = eval(number, max_state.board)
+		if  diff <= alpha:
+			state = move
+			return state
+		if diff < beta:
+			state = move
+			beta = diff
 	return state
 
 func update_board(new_board):
