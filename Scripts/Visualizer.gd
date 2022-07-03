@@ -24,19 +24,22 @@ var weight = [-1000,100,5,1000]
 var state
 var turn
 var history = []
+var move_number = 0
 
 func _ready():
 	draw_complete_board(BoardManager.current_board)
 	var first_board = BoardManager.current_board
 	state = State.new(first_board, 0,0)
 	turn = 1
+	
 
 func _process(delta):
 	if state.black_score != 6 and state.white_score != 6:
+		move_number += 1
 		history.append(state.board)
 
 #	minimax function -------------------------
-#	state = minimax_depth_limit(state, 2, turn)
+#		state = minimax_depth_limit(state, 2, turn)
 #	minimax function -------------------------
 
 #	alpha beta function------------------------
@@ -44,9 +47,10 @@ func _process(delta):
 #	alpha beta function------------------------
 
 #	forward_pruning_with_alphaBetaSearch function------------------------
-#		state = forward_pruning_with_alphaBetaSearch(state, 2, turn)
+		state = forward_pruning_with_alphaBetaSearch(state, 2, turn)
 #	forward_pruning_with_alphaBetaSearch function------------------------
-	
+		if state.black_score == 6 or state.white_score == 6:
+			history.append(state.board)
 		update_board(state.board)
 		turn = 3 - turn 
 
@@ -285,31 +289,24 @@ func _input(event):
 		var press = event.as_text().replace("Kp ", "")
 		
 		if press == "Right":
-			print("History, Towards forward:", index)
-			if index < history.size() - 1:
-				index = index + 1
-				update_board(history[index].board)
-			elif index == history.size() - 1:
-				index = 0
-				update_board(history[index].board)
-				
+			if move_number < history.size() - 1:
+				print("iterate forward:", move_number)
+				move_number += 1
+				update_board(history[move_number])
+			
 		elif press == "Left":
-			print("History, Towards backward:")
-			if index - 1 >= 0:
-				index = index - 1
-				update_board(history[index].board)
-			elif index == 0:
-				index = history.size() - 1
-				update_board(history[index].board)
-				
+			if move_number > 0:
+				print("iterate backward:", move_number)
+				move_number -= 1
+				update_board(history[move_number])
+			
 		elif press == "S":
-			print("History, Start of the game:")
-			index = 0;
-			update_board(all_states[index].board)
-		elif press == "E":
-			print("History: End of the game")
-			index = all_states.size() - 1;
-			update_board(all_states[index].board)
+			move_number = 0;
+			print("Start:", move_number)
+			update_board(history[move_number])
 		
-		print("index: ", index)
+		elif press == "E":
+			move_number = history.size() - 1;
+			print("End:" , move_number)
+			update_board(history[move_number])
 
