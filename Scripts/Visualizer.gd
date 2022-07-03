@@ -5,6 +5,17 @@ onready var pieces = get_node(pieces_path)
 var white_piece = preload("res://Scenes/White Piece.tscn")
 var black_piece = preload("res://Scenes/Black Piece.tscn")
 
+class MyCustomSorter:
+	static func sort_ascending(a, b):
+		if a[1] > b[1]:
+			return true
+		return false
+	
+	static func sort_descending(a, b):
+		if a[1] < b[1]:
+			return true
+		return false
+
 var circle1 = [21,22,31,39,38,29]
 var circle2 = [13,14,15,23,32,40,47,46,45,37,28,20]
 var circle3 = [6,7,8,9,16,24,33,41,48,54,53,52,51,44,36,27,19,12]
@@ -12,7 +23,7 @@ var circle4 = [0,1,2,3,4,10,17,25,34,42,49,55,60,59,58,57,56,50,43,35,26,18,11,5
 var weight = [-1000,100,5,1000]
 var state
 var turn
-var transposition = []
+var history = []
 
 func _ready():
 	draw_complete_board(BoardManager.current_board)
@@ -21,19 +32,23 @@ func _ready():
 	turn = 1
 
 func _process(delta):
-	
-	transposition.append(state.board)
-	
+	if state.black_score != 6 and state.white_score != 6:
+		history.append(state.board)
+
 #	minimax function -------------------------
-	state = minimax_depth_limit(state, 2, turn)
+#	state = minimax_depth_limit(state, 2, turn)
 #	minimax function -------------------------
-	
+
 #	alpha beta function------------------------
-#	state = alpha_beta_search(state, 2, turn)
+#		state = alpha_beta_search(state, 2, turn)
 #	alpha beta function------------------------
+
+#	forward_pruning_with_alphaBetaSearch function------------------------
+#		state = forward_pruning_with_alphaBetaSearch(state, 2, turn)
+#	forward_pruning_with_alphaBetaSearch function------------------------
 	
-	update_board(state.board)
-	turn = 3 - turn 
+		update_board(state.board)
+		turn = 3 - turn 
 
 func eval(piece, board):
 	var result = 0
@@ -90,7 +105,7 @@ func get_marbles(piece, board):
 func filter(moves):
 	var filtered = []
 	for move in moves:
-		if transposition.has(move.board):
+		if history.has(move.board):
 			continue
 		filtered.append(move)
 	return filtered
@@ -99,13 +114,12 @@ func minimax_depth_limit(state, depth, number):
 	var next_state
 	next_state = max_func(state, depth, number)
 	return next_state
-	
 
 func max_func(state, depth, number):
 	if state.black_score == 6 or state.white_score == 6 or depth <= 0:
 		return state
 	
-	var max_value = -99999999999
+	var max_value = -INF
 	var legal_moves
 	legal_moves = Successor.calculate_successor(state,number)
 	var legal_move_filtered = filter(legal_moves)
@@ -121,7 +135,7 @@ func min_func(state, depth, number):
 	if state.black_score == 6 or state.white_score == 6 or depth <= 0:
 		return state
 	
-	var min_value = 9999999999
+	var min_value = INF
 	var legal_moves
 	legal_moves = Successor.calculate_successor(state, 3 - number)
 	var legal_move_filtered = filter(legal_moves)
@@ -135,7 +149,7 @@ func min_func(state, depth, number):
 
 func alpha_beta_search(state, depth, number):
 	var next_state
-	next_state = max_value(state, depth, number, -99999999999999, 9999999999999)
+	next_state = max_value(state, depth, number, -INF, INF)
 	return next_state
 
 func max_value(state, depth, number, alpha, beta):
@@ -166,6 +180,59 @@ func min_value(state, depth, number, alpha, beta):
 	for move in legal_move_filtered:
 		var max_state = max_value(move, depth-1, number, alpha, beta)
 		var diff = eval(number, max_state.board)
+		if  diff <= alpha:
+			state = move
+			return state
+		if diff < beta:
+			state = move
+			beta = diff
+	return state
+
+func pruning(moves, number, sort):
+	var filtered = []
+	for move in moves:
+		var value = eval(number, move.board)
+		filtered.append([move, value, number])
+	filtered.sort_custom(MyCustomSorter, sort)
+	filtered = filtered.slice(0, (filtered.size() * 1)/10)
+	return filtered
+
+func forward_pruning_with_alphaBetaSearch(state, depth, number):
+	var next_state
+	state = [state, 0 , number]
+	next_state = max_forward_pruning(state, depth, number, -INF, INF)
+	return next_state[0]
+
+func max_forward_pruning(state, depth, number, alpha, beta):
+	if state[0].black_score == 6 or state[0].white_score == 6 or depth <= 0:
+		return state
+	
+	var legal_moves
+	legal_moves = Successor.calculate_successor(state[0],number)
+	var legal_move_filtered = filter(legal_moves)
+	var pruning_move = pruning(legal_move_filtered, number, "sort_ascending")
+	for move in pruning_move:
+		var min_state = min_forward_pruning(move, depth-1, number, alpha, beta)
+		var diff = min_state[1]
+		if  diff >= beta:
+			state = move
+			return state
+		if diff > alpha:
+			state = move
+			alpha = diff
+	return state
+
+func min_forward_pruning(state, depth, number, alpha, beta):
+	if state[0].black_score == 6 or state[0].white_score == 6 or depth <= 0:
+		return state
+	
+	var legal_moves
+	legal_moves = Successor.calculate_successor(state[0],number)
+	var legal_move_filtered = filter(legal_moves)
+	var pruning_move = pruning(legal_move_filtered, number, "sort_descending")	
+	for move in pruning_move:
+		var max_state = max_forward_pruning(move, depth-1, number, alpha, beta)
+		var diff = max_state[1]
 		if  diff <= alpha:
 			state = move
 			return state
@@ -212,4 +279,37 @@ func get_3d_coordinates(cell_number):
 		return Vector3(-0.75 + (cell_number - 50) * 0.3, 0.01, 0.78)
 	else:
 		return Vector3(-0.6 + (cell_number - 56) * 0.3, 0.01, 1.04)
-	
+
+func _input(event):
+	if event is InputEventKey and event.pressed:
+		var press = event.as_text().replace("Kp ", "")
+		
+		if press == "Right":
+			print("History, Towards forward:", index)
+			if index < history.size() - 1:
+				index = index + 1
+				update_board(history[index].board)
+			elif index == history.size() - 1:
+				index = 0
+				update_board(history[index].board)
+				
+		elif press == "Left":
+			print("History, Towards backward:")
+			if index - 1 >= 0:
+				index = index - 1
+				update_board(history[index].board)
+			elif index == 0:
+				index = history.size() - 1
+				update_board(history[index].board)
+				
+		elif press == "S":
+			print("History, Start of the game:")
+			index = 0;
+			update_board(all_states[index].board)
+		elif press == "E":
+			print("History: End of the game")
+			index = all_states.size() - 1;
+			update_board(all_states[index].board)
+		
+		print("index: ", index)
+
