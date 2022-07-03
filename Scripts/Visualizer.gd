@@ -20,7 +20,8 @@ var circle1 = [21,22,31,39,38,29]
 var circle2 = [13,14,15,23,32,40,47,46,45,37,28,20]
 var circle3 = [6,7,8,9,16,24,33,41,48,54,53,52,51,44,36,27,19,12]
 var circle4 = [0,1,2,3,4,10,17,25,34,42,49,55,60,59,58,57,56,50,43,35,26,18,11,5]
-var weight = [-1000,100,5,1000]
+var weight = [-100,100,-60,60,-50,50]
+var directions = [BoardManager.L, BoardManager.UL, BoardManager.UR, BoardManager.R, BoardManager.DR, BoardManager.DL]
 var state
 var turn
 var history = []
@@ -60,29 +61,24 @@ func eval(piece, board):
 	var marbles_opp = get_marbles(3 - piece, board)
 	
 	result += weight[0] * kill(marbles)
-	result += weight[1] * enemy_center_distance(marbles_opp)
-	result += weight[2] * center_distance(marbles)
-	result += weight[3] * kill(marbles_opp)
+	result += weight[1] * kill(marbles_opp)
+	result += weight[2] * center_distance(marbles_opp)
+	result += weight[3] * center_distance(marbles)
+	result += weight[4] * grouping(marbles_opp)
+	result += weight[5] * grouping(marbles)
 	
 	return result
 
+func grouping(marbles):
+	var resault = 0
+	for marble in marbles:
+		for direction in directions:
+			if BoardManager.neighbors[marble][direction] in marbles:
+				resault+=1
+	return resault
+
 func kill(marbles):
 	return 14 - len(marbles)
-
-func enemy_center_distance(marbles_opp):
-	var result = 0
-	for p in marbles_opp: 
-		if p in circle1:
-			result += 1
-		elif p in circle2:
-			result += 2
-		elif p in circle3:
-			result += 3
-		elif p in circle4:
-			result += 4
-		else :
-			result += 0
-	return result
 
 func center_distance(marbles):
 	var result = 0
